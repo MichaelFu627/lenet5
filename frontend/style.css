@@ -1,0 +1,412 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   全局
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --bg: #0f1115;
+  --panel: #1a1d24;
+  --panel-2: #232730;
+  --border: #2c313c;
+  --text: #e5e7eb;
+  --text-dim: #9ca3af;
+  --accent: #38bdf8;      /* cyan */
+  --hot: #fbbf24;         /* yellow */
+  --hot-glow: #f59e0b;
+  --predicted: #34d399;   /* emerald */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+}
+
+header {
+  text-align: center;
+  padding: 24px 16px 8px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #38bdf8 0%, #34d399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  margin: 8px 0 4px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+#status {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+#status.ready    { color: var(--predicted); border-color: var(--predicted); }
+#status.warning  { color: var(--hot);       border-color: var(--hot); }
+#status.error    { color: #f87171;          border-color: #f87171; }
+
+footer {
+  text-align: center;
+  padding: 24px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   主区：三列布局 (左:输入 | 中:3D可视化 | 右:预测)
+   ───────────────────────────────────────────────────────────────────────── */
+main {
+  max-width: 1600px;
+  margin: 16px auto;
+  padding: 0 24px;
+}
+
+main.three-col {
+  display: grid;
+  grid-template-columns: 320px 1fr 360px;
+  gap: 20px;
+  align-items: stretch;
+}
+
+@media (max-width: 1200px) {
+  main.three-col { grid-template-columns: 1fr; }
+}
+
+.input-panel,
+.output-panel,
+.viz3d-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.viz3d-panel {
+  align-items: stretch;   /* 让 stage 撑满 */
+  overflow: hidden;       /* 防止倾斜溢出影响布局 */
+}
+
+#drawing-canvas {
+  background: #000;
+  border-radius: 8px;
+  cursor: crosshair;
+  touch-action: none;
+  border: 1px solid var(--border);
+  width: 240px;
+  height: 240px;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+  align-items: center;
+}
+
+button {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+button:hover  { background: var(--border); }
+button:active { transform: translateY(1px); }
+
+#predict-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c1116;
+  font-weight: 600;
+}
+#predict-btn:hover { filter: brightness(1.1); }
+
+.auto-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.auto-toggle input { accent-color: var(--accent); }
+
+.preprocessed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+#preprocessed-canvas {
+  background: #000;
+  image-rendering: pixelated;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* 预测结果 */
+.prediction-big {
+  font-size: 120px;
+  line-height: 1;
+  font-weight: 700;
+  margin: 8px 0 20px;
+  color: var(--text-dim);
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+.prediction-big.has-result {
+  color: var(--predicted);
+  text-shadow: 0 0 40px rgba(52, 211, 153, 0.5);
+}
+
+.prob-bars {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.prob-row {
+  display: grid;
+  grid-template-columns: 18px 1fr 50px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.prob-label { font-family: ui-monospace, monospace; color: var(--text-dim); }
+.prob-bar-bg {
+  background: var(--panel-2);
+  border-radius: 3px;
+  overflow: hidden;
+  height: 10px;
+}
+.prob-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+.prob-row.top .prob-bar-fill { background: var(--predicted); }
+.prob-value { text-align: right; font-family: ui-monospace, monospace; color: var(--text-dim); }
+.prob-row.top .prob-label,
+.prob-row.top .prob-value { color: var(--predicted); font-weight: 600; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   网络可视化
+   ───────────────────────────────────────────────────────────────────────── */
+.network-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.hint {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+
+.network-viz {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 360px;
+}
+
+.layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  position: relative;
+}
+.layer-title {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  font-family: ui-monospace, monospace;
+  text-align: center;
+}
+.layer-title strong { color: var(--text); display: block; font-size: 14px; }
+
+.layer-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+}
+
+/* 卷积层的特征图网格 */
+.feature-grid {
+  display: grid;
+  gap: 4px;
+}
+.feature-map {
+  background: #000;
+  image-rendering: pixelated;
+  border-radius: 2px;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+.feature-map.active {
+  box-shadow: 0 0 8px var(--hot-glow);
+}
+
+/* FC 层用一列圆点表示 */
+.fc-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 320px;
+  overflow: hidden;
+}
+.fc-cell {
+  width: 12px;
+  height: 4px;
+  background: #1a1d24;
+  border-radius: 1px;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 输出层：10 个圆 */
+.output-units {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.output-cell {
+  display: grid;
+  grid-template-columns: 16px 28px;
+  align-items: center;
+  gap: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.output-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #1a1d24;
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+.output-cell.predicted .output-dot {
+  background: var(--predicted);
+  border-color: var(--predicted);
+  box-shadow: 0 0 12px var(--predicted);
+}
+.output-cell.predicted .output-label {
+  color: var(--predicted);
+  font-weight: 700;
+}
+
+/* 层间连接线 (用 ::before 或单独 div) */
+.connector {
+  width: 24px;
+  align-self: center;
+  border-top: 1px dashed var(--border);
+  flex: 0 0 auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3D 立体可视化 (Three.js)
+   ───────────────────────────────────────────────────────────────────────── */
+.viz3d-stage {
+  position: relative;
+  flex: 1;
+  min-height: 420px;
+  background: #0c0e13;
+  border-radius: 8px;
+  overflow: hidden;
+  /* 提示用户可拖动 */
+  cursor: grab;
+}
+.viz3d-stage:active {
+  cursor: grabbing;
+}
+
+/* Three.js 注入的 canvas 撑满 */
+#network-viz-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
+#network-viz-3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* 漂浮 HTML label (跟着 3D 场景投影到屏幕) */
+.viz3d-label-3d {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+.viz3d-label-3d strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 1px;
+}
+.viz3d-label-3d span {
+  display: block;
+  opacity: 0.65;
+  font-size: 10px;
+}
+
+/* 提示用户可拖动 (右下角) */
+.viz3d-stage::after {
+  content: "↔ 拖动旋转 · 滚轮缩放";
+  position: absolute;
+  bottom: 8px; right: 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.55;
+  pointer-events: none;
+  font-family: ui-monospace, monospace;
+}

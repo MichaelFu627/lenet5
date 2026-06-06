@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeNet-5 手写数字识别</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>LeNet-5</h1>
+    <p class="subtitle">在白板写一个数字，看每一层的神经元如何被激活</p>
+    <div id="status">连接后端中...</div>
+  </header>
+
+  <!-- 主区：三列布局 - 左:手写板 中:3D可视化 右:预测结果 -->
+  <main class="three-col">
+    <!-- 左：手写白板 + 控制 -->
+    <section class="input-panel">
+      <h2>1. 手写输入</h2>
+      <canvas id="drawing-canvas" width="280" height="280"></canvas>
+      <div class="controls">
+        <button id="clear-btn">清空</button>
+        <button id="predict-btn">预测</button>
+        <label class="auto-toggle">
+          <input type="checkbox" id="auto-predict" checked />
+          实时预测
+        </label>
+      </div>
+      <div class="preprocessed">
+        <span>模型看到：</span>
+        <canvas id="preprocessed-canvas" width="56" height="56"></canvas>
+      </div>
+    </section>
+
+    <!-- 中：3D 立体可视化（重头戏） -->
+    <section class="viz3d-panel">
+      <h2>2. 网络立体视图</h2>
+      <p class="hint">每一层从左到右流过；光柱粗细 = 信息流强度</p>
+      <div id="network-viz-3d" class="viz3d-stage">
+        <!-- 由 JS 填充 -->
+      </div>
+    </section>
+
+    <!-- 右：预测结果 -->
+    <section class="output-panel">
+      <h2>3. 预测结果</h2>
+      <div class="prediction-big" id="prediction-big">?</div>
+      <div class="prob-bars" id="prob-bars">
+        <!-- 由 JS 填充 10 个柱子 -->
+      </div>
+    </section>
+  </main>
+
+  <!-- 下半部：保留原 2D 平视可视化 -->
+  <section class="network-section">
+    <h2>4. 网络平视图（细节）</h2>
+    <p class="hint">明亮 = 激活强；灰暗 = 激活弱。每个卷积层是一组特征图，每个特征图都是一个学到的滤波器在图像上扫描的结果。</p>
+    <div id="network-viz" class="network-viz">
+      <!-- 由 JS 填充各层 -->
+    </div>
+  </section>
+
+  <footer>
+    <p>纯 NumPy 实现，无任何深度学习框架。前后端代码可在仓库查看。</p>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/network-viz.js"></script>
+  <!-- Three.js (r128) + OrbitControls，本地副本 -->
+  <script src="js/vendor/three.min.js"></script>
+  <script src="js/vendor/OrbitControls.js"></script>
+  <script src="js/network-viz-3d.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

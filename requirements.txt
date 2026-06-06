@@ -1,0 +1,9 @@
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.2
+flask>=2.3
+flask-cors>=4.0
+
+# 可选：运行 notebooks 时需要
+matplotlib>=3.7
+jupyter>=1.0
