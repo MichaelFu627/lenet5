@@ -81,14 +81,14 @@ h2 {
    主区：三列布局 (左:输入 | 中:3D可视化 | 右:预测)
    ───────────────────────────────────────────────────────────────────────── */
 main {
-  max-width: 1600px;
-  margin: 16px auto;
+  max-width: none;
+  margin: 16px 0;
   padding: 0 24px;
 }
 
 main.three-col {
   display: grid;
-  grid-template-columns: 320px 1fr 360px;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 2.5fr) minmax(280px, 0.8fr);
   gap: 20px;
   align-items: stretch;
 }
@@ -111,7 +111,6 @@ main.three-col {
 
 .viz3d-panel {
   align-items: stretch;   /* 让 stage 撑满 */
-  overflow: hidden;       /* 防止倾斜溢出影响布局 */
 }
 
 #drawing-canvas {
@@ -224,9 +223,11 @@ button:active { transform: translateY(1px); }
    网络可视化
    ───────────────────────────────────────────────────────────────────────── */
 .network-section {
-  max-width: 1400px;
   margin: 0 auto;
   padding: 24px;
+}
+.network-section .viz3d-stage {
+  min-height: 720px;     /* 全宽了就让它高一些 */
 }
 .hint {
   font-size: 13px;

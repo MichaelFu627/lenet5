@@ -17,21 +17,25 @@ const NetworkViz3D = (() => {
   // pixel: 单个体素 (cube) 的边长
   // depth_spacing: 同一层内多张 feature map 之间的 z 间距
   // x: 该层在场景中的 x 坐标（沿水平轴排开，整个网络中心在 x=0）
+
   const LAYERS = [
-    { name: "Input",  type: "maps",  count: 1,   w: 28, h: 28, pixel: 0.22, depth_spacing: 0,    x: -36 },
-    { name: "C1",     type: "maps",  count: 6,   w: 28, h: 28, pixel: 0.22, depth_spacing: 1.0,  x: -22 },
-    { name: "S2",     type: "maps",  count: 6,   w: 14, h: 14, pixel: 0.38, depth_spacing: 1.0,  x: -10 },
-    { name: "C3",     type: "maps",  count: 16,  w: 10, h: 10, pixel: 0.45, depth_spacing: 0.7,  x: 2   },
-    { name: "S4",     type: "maps",  count: 16,  w: 5,  h: 5,  pixel: 0.75, depth_spacing: 0.7,  x: 14  },
-    { name: "C5",     type: "line",  count: 120, pixel: 0.18,                                    x: 22, axis: "y" },
-    { name: "F6",     type: "line",  count: 84,  pixel: 0.24,                                    x: 30, axis: "y" },
-    { name: "Output", type: "cubes", count: 10,  pixel: 0.85,                                    x: 40, axis: "y" },
+    // 卷积层：每张 feature map 是 y-z 平面上的一张"卡片"，多张卡片沿 x 轴(网络流方向)排开
+    // x 是该层的中心位置，slice_spacing 是同层内多张 feature map 沿 x 的间距
+    { name: "Input",  type: "maps",  count: 1,   w: 28, h: 28, pixel: 0.22, slice_spacing: 0,    x: -30 },
+    { name: "C1",     type: "maps",  count: 6,   w: 28, h: 28, pixel: 0.22, slice_spacing: 1.2,  x: -18 },
+    { name: "S2",     type: "maps",  count: 6,   w: 14, h: 14, pixel: 0.38, slice_spacing: 1.2,  x: -6  },
+    { name: "C3",     type: "maps",  count: 16,  w: 10, h: 10, pixel: 0.45, slice_spacing: 0.6,  x:  8  },
+    { name: "S4",     type: "maps",  count: 16,  w: 5,  h: 5,  pixel: 0.75, slice_spacing: 0.6,  x:  22 },
+    { name: "C5",     type: "line",  count: 120, pixel: 0.10,                                    x:  34, axis: "y" },
+    { name: "F6",     type: "line",  count: 84,  pixel: 0.15,                                    x:  44, axis: "y" },
+    { name: "Output", type: "cubes", count: 10,  pixel: 0.70,                                    x:  54, axis: "y" },
   ];
 
   let scene, camera, renderer, controls;
   let layerMeshes = {};
   let layerGroups = {};
   let layerLabels = {};
+  let fcConnections = {};
   let raf = null;
   let needsRender = true;
 
@@ -47,6 +51,7 @@ const NetworkViz3D = (() => {
 
   function build() {
     container.innerHTML = "";
+    fcConnections = {};
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0c0e13);
@@ -56,8 +61,8 @@ const NetworkViz3D = (() => {
     const h = container.clientHeight || 380;
     camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 400);
     // 初始视角：从右上前方俯视，能看到整个网络
-    camera.position.set(15, 22, 65);
-    camera.lookAt(2, 0, 0);
+    camera.position.set(30, 20, 50);
+    camera.lookAt(12, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -67,7 +72,7 @@ const NetworkViz3D = (() => {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.target.set(2, 0, 0);
+    controls.target.set(12, 0, 0);
     controls.minDistance = 20;
     controls.maxDistance = 180;
     controls.addEventListener("change", () => { needsRender = true; });
@@ -91,6 +96,10 @@ const NetworkViz3D = (() => {
       layerLabels[layer.name] = lbl;
     });
 
+    // FC 全连接层之间画连线
+    addFCConnections("C5", "F6");
+    addFCConnections("F6", "Output");
+
     const ro = new ResizeObserver(() => {
       const w = container.clientWidth;
       const h = container.clientHeight || 380;
@@ -111,24 +120,27 @@ const NetworkViz3D = (() => {
     return "";
   }
 
-  // 卷积/池化层：count 张 H×W 平面沿 z 排开
+  // 卷积/池化层：每张 feature map 在 yz 平面上（"面向右侧"），多张沿 x 轴堆叠
   function buildMapsLayer(layer, group) {
-    const { count, w, h, pixel, depth_spacing } = layer;
+    const { count, w, h, pixel, slice_spacing } = layer;
     const meshes = [];
     const geo = new THREE.BoxGeometry(pixel * 0.85, pixel * 0.85, pixel * 0.85);
-    const totalDepth = (count - 1) * depth_spacing;
-    const z0 = -totalDepth / 2;
+    // count 张 map 沿 x 排开，整体居中在 group.x
+    const totalSpan = (count - 1) * slice_spacing;
+    const x0 = -totalSpan / 2;
 
     for (let f = 0; f < count; f++) {
-      const layerZ = z0 + f * depth_spacing;
+      const layerX = x0 + f * slice_spacing;
       const featMeshes = [];
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
-          const px = (x - (w - 1) / 2) * pixel;
+          // feature map 的 x 维 → 世界 z 轴；y 维 → 世界 y 轴
+          // 所有像素共享世界 x 坐标 → 整张 map 是 yz 平面上的一张"片"
           const py = -(y - (h - 1) / 2) * pixel;
+          const pz = -(x - (w - 1) / 2) * pixel;
           const mat = new THREE.MeshBasicMaterial({ color: 0x0c0e13 });
           const mesh = new THREE.Mesh(geo, mat);
-          mesh.position.set(px, py, layerZ);
+          mesh.position.set(layerX, py, pz);
           group.add(mesh);
           featMeshes.push(mesh);
         }
@@ -189,6 +201,84 @@ const NetworkViz3D = (() => {
     layerMeshes[layer.name] = meshes;
   }
 
+  // FC 全连接：两层之间每对神经元画一条线
+  // 模块顶部需要新增一个 let（跟 layerMeshes 那些放在一起）
+  // let fcConnections = {};
+
+  function addFCConnections(fromName, toName) {
+    const fromMeshes = layerMeshes[fromName];
+    const toMeshes = layerMeshes[toName];
+    if (!fromMeshes || !toMeshes) return;
+
+    const positions = [];
+    for (const fm of fromMeshes) {
+      const fp = new THREE.Vector3(); fm.getWorldPosition(fp);
+      for (const tm of toMeshes) {
+        const tp = new THREE.Vector3(); tm.getWorldPosition(tp);
+        positions.push(fp.x, fp.y, fp.z, tp.x, tp.y, tp.z);
+      }
+    }
+    // 顶点颜色初始全 0 (即不可见)；render() 时按激活值填充
+    const colors = new Float32Array(positions.length);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
+    const mat = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const lines = new THREE.LineSegments(geo, mat);
+    scene.add(lines);
+    fcConnections[`${fromName}->${toName}`] = {
+      lines, fromName, toName,
+      fromCount: fromMeshes.length, toCount: toMeshes.length,
+    };
+  }
+
+  // 更新连线颜色：每条线两端按各自神经元的激活强度上色
+  // 渐变效果让你能看到信号"流动"
+  function updateFCLines(activations) {
+    Object.values(fcConnections).forEach((conn) => {
+      const { lines, fromName, toName, fromCount, toCount } = conn;
+      // 从该层名取激活向量；Output 用 probs
+      const fromActs = activations[fromName];
+      const toActs = (toName === "Output") ? activations.probs : activations[toName];
+      if (!fromActs || !toActs) return;
+
+      // 归一化激活到 [0, 1]
+      let fMax = 1e-9, tMax = 1e-9;
+      for (const v of fromActs) { const a = Math.abs(v); if (a > fMax) fMax = a; }
+      for (const v of toActs)   { const a = Math.abs(v); if (a > tMax) tMax = a; }
+
+      const colors = lines.geometry.attributes.color.array;
+      let idx = 0;
+      // 蓝青色基色 #38bdf8 = (0.22, 0.74, 0.97)
+      for (let i = 0; i < fromCount; i++) {
+        const fs = Math.abs(fromActs[i] || 0) / fMax;
+        // 强度做幂次拉伸：让弱的更弱，强的更显眼
+        const fStr = Math.pow(fs, 1.5);
+        for (let j = 0; j < toCount; j++) {
+          const ts = Math.abs(toActs[j] || 0) / tMax;
+          const tStr = Math.pow(ts, 1.5);
+          // 起点端颜色按 from 激活
+          colors[idx++] = fStr * 0.22;
+          colors[idx++] = fStr * 0.74;
+          colors[idx++] = fStr * 0.97;
+          // 终点端颜色按 to 激活 → 形成沿连线的渐变
+          colors[idx++] = tStr * 0.22;
+          colors[idx++] = tStr * 0.74;
+          colors[idx++] = tStr * 0.97;
+        }
+      }
+      lines.geometry.attributes.color.needsUpdate = true;
+    });
+    needsRender = true;
+  }
+
   function render(activations, prediction, image28) {
     // Input
     if (image28 && layerMeshes["Input"]) {
@@ -245,6 +335,8 @@ const NetworkViz3D = (() => {
       }
     }
 
+    updateFCLines(activations);
+
     needsRender = true;
   }
 
@@ -255,6 +347,10 @@ const NetworkViz3D = (() => {
       } else {
         entry.forEach((m) => m.material.color.set(0x0c0e13));
       }
+    });
+    Object.values(fcConnections).forEach(({ lines }) => {
+      lines.geometry.attributes.color.array.fill(0);
+      lines.geometry.attributes.color.needsUpdate = true;
     });
     needsRender = true;
   }

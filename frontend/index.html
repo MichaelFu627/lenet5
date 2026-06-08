@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LeNet-5 手写数字识别</title>
+  <title>LeNet-5 Hand-written Digit Recognition</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -33,11 +33,11 @@
       </div>
     </section>
 
-    <!-- 中：3D 立体可视化（重头戏） -->
+    <!-- 中：网络平视细节 -->
     <section class="viz3d-panel">
-      <h2>2. 网络立体视图</h2>
-      <p class="hint">每一层从左到右流过；光柱粗细 = 信息流强度</p>
-      <div id="network-viz-3d" class="viz3d-stage">
+      <h2>2. 网络平视图（细节）</h2>
+      <p class="hint">明亮 = 激活强；灰暗 = 激活弱。每个卷积层是一组特征图。</p>
+      <div id="network-viz" class="network-viz">
         <!-- 由 JS 填充 -->
       </div>
     </section>
@@ -52,12 +52,12 @@
     </section>
   </main>
 
-  <!-- 下半部：保留原 2D 平视可视化 -->
+  <!-- 下半部：3D 立体可视化 -->
   <section class="network-section">
-    <h2>4. 网络平视图（细节）</h2>
-    <p class="hint">明亮 = 激活强；灰暗 = 激活弱。每个卷积层是一组特征图，每个特征图都是一个学到的滤波器在图像上扫描的结果。</p>
-    <div id="network-viz" class="network-viz">
-      <!-- 由 JS 填充各层 -->
+    <h2>4. 网络立体视图</h2>
+    <p class="hint">每个卷积层的多张特征图沿水平方向排开；FC 层之间画全连接线。鼠标拖动旋转，滚轮缩放。</p>
+    <div id="network-viz-3d" class="viz3d-stage">
+      <!-- 由 JS 填充 -->
     </div>
   </section>
 
