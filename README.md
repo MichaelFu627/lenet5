@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: mit
-short_description: Hand-drawn digits, hand-coded neural network. Watch every layer light up in real time.
+short_description: Hand-drawn digits, hand-coded CNN. Live activations.
 ---
 
 # LeNet-5 From Scratch ✍️
