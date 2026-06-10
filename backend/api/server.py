@@ -143,4 +143,10 @@ def static_files(filename):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=False)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=5001)
+    parser.add_argument("--host", type=str, default="0.0.0.0")
+    args = parser.parse_args()
+    print(f"[server] listening on http://{args.host}:{args.port}")
+    app.run(host=args.host, port=args.port, debug=False)
