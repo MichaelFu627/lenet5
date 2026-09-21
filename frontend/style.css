@@ -27,6 +27,7 @@ body {
 }
 
 header {
+  position: relative;
   text-align: center;
   padding: 24px 16px 8px;
 }
@@ -60,6 +61,32 @@ header h1 {
 #status.ready    { color: var(--predicted); border-color: var(--predicted); }
 #status.warning  { color: var(--hot);       border-color: var(--hot); }
 #status.error    { color: #f87171;          border-color: #f87171; }
+
+/* 语言切换（右上角） */
+.lang-toggle {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  gap: 4px;
+}
+.lang-btn {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lang-btn:hover { color: var(--text); }
+.lang-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c1116;
+  font-weight: 600;
+}
 
 footer {
   text-align: center;
@@ -402,7 +429,7 @@ button:active { transform: translateY(1px); }
 
 /* 提示用户可拖动 (右下角) */
 .viz3d-stage::after {
-  content: "↔ 拖动旋转 · 滚轮缩放";
+  content: "↔ Drag to rotate · scroll to zoom";
   position: absolute;
   bottom: 8px; right: 12px;
   font-size: 11px;
@@ -410,4 +437,7 @@ button:active { transform: translateY(1px); }
   opacity: 0.55;
   pointer-events: none;
   font-family: ui-monospace, monospace;
+}
+html[data-lang="zh"] .viz3d-stage::after {
+  content: "↔ 拖动旋转 · 滚轮缩放";
 }

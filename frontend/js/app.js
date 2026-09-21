@@ -8,6 +8,12 @@
   const predictBtn = document.getElementById("predict-btn");
   const autoToggle = document.getElementById("auto-predict");
 
+  // 统一更新状态栏：记录 i18n key，并立即用当前语言渲染
+  function setStatus(key, vars) {
+    statusEl.setAttribute("data-i18n", key);
+    statusEl.textContent = I18N.t(key, vars);
+  }
+
   // ──────────────────────────────────────────────────────────────────────
   // 初始化网络可视化骨架（2D 平视 + 3D 立体）
   // ──────────────────────────────────────────────────────────────────────
@@ -34,14 +40,14 @@
     try {
       const h = await API.health();
       if (h.weights_loaded) {
-        statusEl.textContent = "✓ 后端就绪，模型已加载";
+        setStatus("status.ready");
         statusEl.className = "ready";
       } else {
-        statusEl.textContent = "⚠ 后端连上了，但模型未训练 (请先运行 python -m backend.train)";
+        setStatus("status.untrained");
         statusEl.className = "warning";
       }
     } catch (e) {
-      statusEl.textContent = "✗ 无法连接后端 (默认 :5000)";
+      setStatus("status.unreachable");
       statusEl.className = "error";
     }
   })();
@@ -72,7 +78,7 @@
       updatePredictionUI(res, image, useInstant);
     } catch (e) {
       console.error(e);
-      statusEl.textContent = `预测出错: ${e.message}`;
+      setStatus("status.predict_error", { msg: e.message });
       statusEl.className = "error";
     } finally {
       inFlight = false;
